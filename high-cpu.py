@@ -92,11 +92,6 @@ def parse_top(filename: str, datetime_regex: re, datetime_format: str) -> Dict[s
             if line.startswith('KiB Swap') or line.startswith('MiB Swap'):
                 continue
 
-            # limit -= 1
-            # if limit <= 0:
-            #     continue
-
-            # 108335 jboss     20   0   14.7g   8.6g  40040 S  6.2  4.4   0:00.02 Thread-4 (Activ
             fields = line.split()
 
             pid = int(fields[0])
