@@ -126,7 +126,7 @@ This is useful for tracking one or multiple threads over multiple timestamps.
 
 #### Thread Name
 
-**NOTE:** regular expresions are allowed!
+**NOTE:** regular expressions are allowed!
 
 ```
 $ ./high-cpu.py -T 'default I/O-[0-9]+' /tmp
@@ -168,7 +168,7 @@ LC_TIME=ja_JP.UTF-8 ./high-cpu.py --datetime-regex '[0-9]{4}年 +1?[0-9]月 +1?[
 **NOTE:** if you need any locale specific items in the datetime format (ex: `%A` for the weekday name), you need to make sure the tool is running in the right locale.
 On Linux, you can specify the locale in the `$LC_TIME` environment variable.
 
-**NOTE:** the `datetime-regex` does not need to match the full datetime format; just enough to distiguish it from other lines in the data files.
+**NOTE:** the `datetime-regex` does not need to match the full datetime format; just enough to distinguish it from other lines in the data files.
 
 ### Handling multiple data files
 
