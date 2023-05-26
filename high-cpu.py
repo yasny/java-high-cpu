@@ -2,14 +2,28 @@
 import locale
 import re
 import argparse
-from typing import Dict, Any
 from operator import itemgetter
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, Any
 
 
-def parse_threaddump(filename: str, datetime_regex: re, datetime_format: str) -> Dict[str, Any]:
-    result = dict()
+def re_search(regex, data, error_message) -> re.Match:
+    match = re.search(regex, data)
+    if not match:
+        raise RuntimeError(error_message)
+    return match
+
+
+def re_match(regex, data, error_message) -> re.Match:
+    match = re.match(regex, data)
+    if not match:
+        raise RuntimeError(error_message)
+    return match
+
+
+def parse_threaddump(filename: str | Path, datetime_regex: re.Pattern, datetime_format: str) -> Dict[datetime, dict[str, Any]]:
+    result: dict[datetime, dict[str, Any]] = dict()
     current_date = None
     skip_next = False
 
@@ -37,8 +51,8 @@ def parse_threaddump(filename: str, datetime_regex: re, datetime_format: str) ->
                 continue
 
             if 'nid=0x' in line:
-                nid = re.search('nid=(0x[0-9a-zA-Z]+)', line)[1]
-                thread_id = re.match('"([^"]+)"', line)[1]
+                nid = re_search('nid=(0x[0-9a-zA-Z]+)', line, f'Unable to match nid in line: {line}')[1]
+                thread_id = re_match('"([^"]+)"', line, f'Unable to match thread ID in line: {line}')[1]
                 result[current_date][nid] = {'lines': [line], 'id': thread_id}
             else:
                 result[current_date][nid]['lines'].append(line)
@@ -46,8 +60,8 @@ def parse_threaddump(filename: str, datetime_regex: re, datetime_format: str) ->
     return result
 
 
-def parse_top(filename: str, datetime_regex: re, datetime_format: str) -> Dict[str, Any]:
-    result = dict()
+def parse_top(filename: str | Path, datetime_regex: re.Pattern, datetime_format: str) -> Dict[datetime, Any]:
+    result: dict[datetime, Any] = dict()
     current_date = None
     line_count = 0
 
@@ -70,19 +84,19 @@ def parse_top(filename: str, datetime_regex: re, datetime_format: str) -> Dict[s
                 continue
 
             if line.startswith('top'):
-                result[current_date]['uptime'] = re.search('up[ 0-9a-zA-Z]+', line)[0]
-                load_avgs = re.search('load average: ([0-9]+.[0-9]+), ([0-9]+.[0-9]+), ([0-9]+.[0-9]+)', line)
+                result[current_date]['uptime'] = re_search('up[ 0-9a-zA-Z]+', line, f"Uptime not found in line: {line}")[0]
+                load_avgs = re_search('load average: ([0-9]+.[0-9]+), ([0-9]+.[0-9]+), ([0-9]+.[0-9]+)', line, f"Unable to parse load averages in line: {line}")
                 result[current_date]['load_averages'] = {'1 min': load_avgs[1], '5 min': load_avgs[2], '15 min': load_avgs[3]}
                 continue
 
             if line.startswith('Threads'):
-                result[current_date]['tasks'] = re.search('[0-9]+ total', line)[0]
+                result[current_date]['tasks'] = re_search('[0-9]+ total', line, f"Unable to find total tasks in line: {line}")[0]
                 continue
 
             if line.startswith('%Cpu'):
-                us = re.search('([0-9]+.[0-9]+) us', line)[1]
-                sy = re.search('([0-9]+.[0-9]+) sy', line)[1]
-                id = re.search('([0-9]+.[0-9]+) id', line)[1]
+                us = re_search('([0-9]+.[0-9]+) us', line, f"Unable to parse user CPU in line: {line}")[1]
+                sy = re_search('([0-9]+.[0-9]+) sy', line, f"Unable to parse system CPU in line: {line}")[1]
+                id = re_search('([0-9]+.[0-9]+) id', line, f"Unable to parse idle CPU in line: {line}")[1]
                 result[current_date]['cpu'] = {'us': us, 'sy': sy, 'id': id}
                 continue
 
@@ -109,6 +123,9 @@ def parse_top(filename: str, datetime_regex: re, datetime_format: str) -> Dict[s
                 'status': fields[7],
                 'command': ' '.join(fields[11:])
             }
+
+    if len(result) == 0:
+        raise RuntimeError(f'No top data was found in "{filename}"; perhaps the date time regex is not correct?')
 
     return result
 
